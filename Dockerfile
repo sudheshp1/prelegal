@@ -3,8 +3,9 @@ FROM node:24-alpine AS frontend
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
-# The frontend reads agreement text from ../templates at build time.
+# The frontend reads the document specs and agreement text from the repo root at build time.
 COPY templates /app/templates
+COPY documents.json catalog.json /app/
 COPY frontend ./
 RUN npm run build
 
@@ -21,6 +22,8 @@ WORKDIR /app/backend
 COPY backend/pyproject.toml backend/uv.lock backend/.python-version ./
 RUN uv sync --frozen --no-dev --no-install-project
 COPY backend/app ./app
+# The backend reads the document specs from the repo root (/app).
+COPY documents.json catalog.json /app/
 COPY --from=frontend /app/frontend/out /app/static
 
 EXPOSE 8000

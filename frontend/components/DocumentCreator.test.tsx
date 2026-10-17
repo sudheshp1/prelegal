@@ -1,76 +1,97 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { defaultNdaData, type NdaData } from "@/lib/nda";
-import type { StandardTerms } from "@/lib/standardTerms";
-import NdaCreator, { GREETING, MAX_HISTORY } from "./NdaCreator";
+import { emptyDocument, type DocumentData, type LegalDocument } from "@/lib/documents";
+import DocumentCreator, { GREETING, MAX_HISTORY } from "./DocumentCreator";
 
-const terms: StandardTerms = { clauses: [], attribution: "" };
+const pilot: LegalDocument = {
+  id: "pilot-agreement",
+  filename: "Pilot-Agreement.md",
+  title: "Pilot Agreement",
+  parties: ["Provider", "Customer"],
+  fields: [
+    { key: "pilotPeriod", label: "Pilot Period", description: "How long", required: true },
+    { key: "fees", label: "Fees", description: "Any fees" },
+  ],
+  clauses: [{ depth: 0, number: "1.", body: [{ kind: "bold", text: "Pilot" }] }],
+  attribution: "Based on Common Paper",
+};
 
-function reply(content: string, nda: Partial<NdaData>, complete = false) {
+const pilotDocument = (values: Record<string, string> = {}): DocumentData => ({
+  ...emptyDocument,
+  documentType: "pilot-agreement",
+  values: { pilotPeriod: "", fees: "", ...values },
+});
+
+function reply(content: string, document: DocumentData = emptyDocument, complete = false) {
   return vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
     ok: true,
     status: 200,
-    json: async () => ({ reply: content, nda: { ...defaultNdaData, ...nda }, complete }),
+    json: async () => ({ reply: content, document, complete }),
   } as Response);
 }
 
 async function say(text: string) {
   const user = userEvent.setup();
-  await user.type(screen.getByLabelText("Message"), text);
+  await user.click(screen.getByLabelText("Message"));
+  await user.paste(text);
   await user.click(screen.getByRole("button", { name: "Send" }));
 }
 
+const renderCreator = () => render(<DocumentCreator documents={[pilot]} />);
 const conversation = () => within(screen.getByRole("list", { name: "Conversation" }));
 
-describe("NdaCreator", () => {
-  it("greets the user without calling the API", () => {
+describe("DocumentCreator", () => {
+  it("greets the user without calling the API and waits for a document choice", () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
-    render(<NdaCreator terms={terms} />);
+    renderCreator();
 
     expect(conversation().getByText(GREETING.content)).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByText(/Your document will appear here/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Download PDF" })).not.toBeInTheDocument();
   });
 
-  it("sends the conversation and fields, then shows the reply and updates the preview", async () => {
-    const fetchMock = reply("Great, which state's law applies?", { governingLaw: "Delaware" });
-    render(<NdaCreator terms={terms} />);
+  it("shows the chosen document's preview once the AI picks a type", async () => {
+    const fetchMock = reply("Great, a Pilot Agreement. How long is the pilot?", pilotDocument());
+    renderCreator();
 
-    await say("Acme and Globex");
+    await say("I want to run a pilot with a customer");
 
-    expect(await conversation().findByText("Great, which state's law applies?")).toBeInTheDocument();
-    expect(conversation().getByText("Acme and Globex")).toBeInTheDocument();
-    expect(screen.getAllByText("Delaware").length).toBeGreaterThan(0);
+    expect(await conversation().findByText(/How long is the pilot/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pilot Agreement", level: 2 })).toBeInTheDocument();
+    expect(screen.getByText("[Pilot Period]")).toBeInTheDocument();
+    expect(screen.getByText(/Download is available once/)).toBeInTheDocument();
 
     const body = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
-    expect(body.messages).toEqual([GREETING, { role: "user", content: "Acme and Globex" }]);
-    expect(body.nda).toEqual(defaultNdaData);
+    expect(body.messages).toEqual([GREETING, { role: "user", content: "I want to run a pilot with a customer" }]);
+    expect(body.document).toEqual(emptyDocument);
   });
 
-  it("offers the PDF download once the document is complete", async () => {
-    reply("All done! You can download your NDA.", { governingLaw: "Delaware" }, true);
-    render(<NdaCreator terms={terms} />);
+  it("updates the preview and offers the PDF once complete", async () => {
+    reply("All done! You can download it.", pilotDocument({ pilotPeriod: "90 days" }), true);
+    renderCreator();
 
-    await say("Delaware");
+    await say("90 days");
 
     expect(await screen.findByRole("button", { name: "Download PDF" })).toBeInTheDocument();
+    expect(screen.getByText("90 days", { selector: "dd" })).toBeInTheDocument();
   });
 
   it("restores the message and shows an error when the AI is unavailable", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({ ok: false, status: 502 } as Response);
-    render(<NdaCreator terms={terms} />);
+    renderCreator();
 
-    await say("Acme and Globex");
+    await say("An NDA please");
 
     expect(await screen.findByRole("alert")).toHaveTextContent("couldn't get a reply");
-    expect(screen.getByLabelText("Message")).toHaveValue("Acme and Globex");
-    expect(conversation().queryByText("Acme and Globex")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Message")).toHaveValue("An NDA please");
+    expect(conversation().queryByText("An NDA please")).not.toBeInTheDocument();
   });
 
   it("sends on Enter and focuses the input after the reply", async () => {
-    reply("Thanks!", {});
-    render(<NdaCreator terms={terms} />);
+    reply("Thanks!");
+    renderCreator();
 
     await userEvent.type(screen.getByLabelText("Message"), "Acme{Enter}");
 
@@ -82,14 +103,14 @@ describe("NdaCreator", () => {
   it("locks the input while waiting for a reply", async () => {
     let respond!: (response: Response) => void;
     vi.spyOn(globalThis, "fetch").mockReturnValueOnce(new Promise((resolve) => (respond = resolve)));
-    render(<NdaCreator terms={terms} />);
+    renderCreator();
 
     await say("Acme");
 
     expect(screen.getByLabelText("Message")).toBeDisabled();
     expect(conversation().getByText("Thinking…")).toBeInTheDocument();
 
-    respond({ ok: true, status: 200, json: async () => ({ reply: "Thanks!", nda: defaultNdaData, complete: false }) } as Response);
+    respond({ ok: true, status: 200, json: async () => ({ reply: "Thanks!", document: emptyDocument, complete: false }) } as Response);
 
     expect(await conversation().findByText("Thanks!")).toBeInTheDocument();
     expect(screen.getByLabelText("Message")).toBeEnabled();
@@ -97,13 +118,13 @@ describe("NdaCreator", () => {
 
   it("sends only the most recent messages", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
-    render(<NdaCreator terms={terms} />);
+    renderCreator();
 
     for (let turn = 1; turn <= MAX_HISTORY / 2 + 1; turn++) {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ reply: `Reply ${turn}`, nda: defaultNdaData, complete: false }),
+        json: async () => ({ reply: `Reply ${turn}`, document: emptyDocument, complete: false }),
       } as Response);
       await say(`Message ${turn}`);
       await conversation().findByText(`Reply ${turn}`);
@@ -116,7 +137,7 @@ describe("NdaCreator", () => {
 
   it("does not send blank messages", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
-    render(<NdaCreator terms={terms} />);
+    renderCreator();
 
     await userEvent.type(screen.getByLabelText("Message"), "   {Enter}");
 

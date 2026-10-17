@@ -1,0 +1,188 @@
+{
+  "about": "Drafting specs for each supported document. `filename` links to catalog.json and templates/. Every field is free text; kind 'date' fields hold yyyy-mm-dd and 'long' fields are multi-line. Each document also has two parties with company, signatory name, title and notice address.",
+  "documents": [
+    {
+      "id": "mutual-nda",
+      "filename": "Mutual-NDA.md",
+      "title": "Mutual Non-Disclosure Agreement",
+      "parties": ["Party 1", "Party 2"],
+      "intro": "This Mutual Non-Disclosure Agreement (the “MNDA”) consists of: (1) this Cover Page (“Cover Page”) and (2) the Common Paper Mutual NDA Standard Terms Version 1.0 (“Standard Terms”) identical to those posted at commonpaper.com/standards/mutual-nda/1.0. Any modifications of the Standard Terms should be made on the Cover Page, which will control over conflicts with the Standard Terms.",
+      "signingStatement": "By signing this Cover Page, each party agrees to enter into this MNDA as of the Effective Date.",
+      "fields": [
+        { "key": "purpose", "label": "Purpose", "kind": "long", "required": true, "description": "How Confidential Information may be used", "default": "Evaluating whether to enter into a business relationship with the other party." },
+        { "key": "effectiveDate", "label": "Effective Date", "kind": "date", "required": true, "description": "When the MNDA takes effect" },
+        { "key": "mndaTerm", "label": "MNDA Term", "required": true, "description": "The length of this MNDA: 'Expires N year(s) from Effective Date.' or 'Continues until terminated in accordance with the terms of the MNDA.'", "default": "Expires 1 year from Effective Date." },
+        { "key": "termOfConfidentiality", "label": "Term of Confidentiality", "required": true, "description": "How long Confidential Information is protected: 'N year(s) from Effective Date, but in the case of trade secrets until Confidential Information is no longer considered a trade secret under applicable laws.' or 'In perpetuity.'", "default": "1 year from Effective Date, but in the case of trade secrets until Confidential Information is no longer considered a trade secret under applicable laws." },
+        { "key": "governingLaw", "label": "Governing Law", "required": true, "description": "US state whose law governs, e.g. Delaware" },
+        { "key": "jurisdiction", "label": "Jurisdiction", "required": true, "description": "City or county and state of the courts, e.g. courts located in New Castle, DE" },
+        { "key": "modifications", "label": "MNDA Modifications", "kind": "long", "description": "Any modifications to the Standard Terms" }
+      ]
+    },
+    {
+      "id": "cloud-service-agreement",
+      "filename": "CSA.md",
+      "title": "Cloud Service Agreement",
+      "parties": ["Provider", "Customer"],
+      "fields": [
+        { "key": "effectiveDate", "label": "Effective Date", "kind": "date", "required": true, "description": "When the agreement takes effect" },
+        { "key": "cloudService", "label": "Cloud Service", "kind": "long", "required": true, "description": "The SaaS product or cloud service being provided" },
+        { "key": "subscriptionPeriod", "label": "Subscription Period", "required": true, "description": "Length of the subscription, e.g. 1 year from the Effective Date" },
+        { "key": "fees", "label": "Fees", "kind": "long", "required": true, "description": "Subscription fees and pricing" },
+        { "key": "paymentProcess", "label": "Payment Process", "required": true, "description": "How and when the Customer pays, e.g. invoiced annually, due within 30 days" },
+        { "key": "technicalSupport", "label": "Technical Support", "kind": "long", "description": "Support the Provider offers during the Subscription Period" },
+        { "key": "nonRenewalNoticeDate", "label": "Non-Renewal Notice Date", "description": "How far before renewal a party must give notice not to renew", "default": "30 days before the end of the Subscription Period." },
+        { "key": "generalCapAmount", "label": "General Cap Amount", "required": true, "description": "Limit of liability, e.g. fees paid or payable in the 12 months before the claim" },
+        { "key": "governingLaw", "label": "Governing Law", "required": true, "description": "US state whose law governs, e.g. Delaware" },
+        { "key": "chosenCourts", "label": "Chosen Courts", "required": true, "description": "Courts for disputes, e.g. courts located in New Castle, DE" }
+      ]
+    },
+    {
+      "id": "design-partner-agreement",
+      "filename": "design-partner-agreement.md",
+      "title": "Design Partner Agreement",
+      "parties": ["Provider", "Partner"],
+      "fields": [
+        { "key": "effectiveDate", "label": "Effective Date", "kind": "date", "required": true, "description": "When the agreement takes effect" },
+        { "key": "product", "label": "Product", "kind": "long", "required": true, "description": "The pre-release product the Partner gets access to" },
+        { "key": "program", "label": "Program", "kind": "long", "required": true, "description": "What the design partner program involves, e.g. feedback sessions and usage expectations" },
+        { "key": "term", "label": "Term", "required": true, "description": "How long the agreement lasts, e.g. 6 months from the Effective Date" },
+        { "key": "fees", "label": "Fees", "description": "Any fees the Partner pays, or None" },
+        { "key": "governingLaw", "label": "Governing Law", "required": true, "description": "US state whose law governs, e.g. Delaware" },
+        { "key": "chosenCourts", "label": "Chosen Courts", "required": true, "description": "Courts for disputes, e.g. courts located in New Castle, DE" }
+      ]
+    },
+    {
+      "id": "data-processing-agreement",
+      "filename": "DPA.md",
+      "title": "Data Processing Agreement",
+      "parties": ["Provider", "Customer"],
+      "fields": [
+        { "key": "agreement", "label": "Agreement", "required": true, "description": "The underlying agreement this DPA supplements, e.g. the Cloud Service Agreement dated 2026-01-15" },
+        { "key": "effectiveDate", "label": "Effective Date", "kind": "date", "required": true, "description": "When the DPA takes effect" },
+        { "key": "natureAndPurposeOfProcessing", "label": "Nature and Purpose of Processing", "kind": "long", "required": true, "description": "What processing the Provider performs and why" },
+        { "key": "categoriesOfDataSubjects", "label": "Categories of Data Subjects", "kind": "long", "required": true, "description": "Whose personal data is processed, e.g. Customer's employees and end users" },
+        { "key": "categoriesOfPersonalData", "label": "Categories of Personal Data", "kind": "long", "required": true, "description": "Types of personal data, e.g. names, email addresses, usage data" },
+        { "key": "specialCategoryData", "label": "Special Category Data", "description": "Any special category data processed, or None" },
+        { "key": "specialCategoryDataRestrictions", "label": "Special Category Data Restrictions or Safeguards", "kind": "long", "description": "Extra restrictions or safeguards for any special category data" },
+        { "key": "durationOfProcessing", "label": "Duration of Processing", "required": true, "description": "How long processing lasts", "default": "For the term of the Agreement." },
+        { "key": "frequencyOfTransfer", "label": "Frequency of Transfer", "description": "How often data is transferred", "default": "Continuous." },
+        { "key": "approvedSubprocessors", "label": "Approved Subprocessors", "kind": "long", "description": "Subprocessors the Customer approves" },
+        { "key": "providerSecurityContact", "label": "Provider Security Contact", "required": true, "description": "Who to contact about security issues, e.g. security@provider.com" },
+        { "key": "governingMemberState", "label": "Governing Member State", "required": true, "description": "EU member state whose law governs the Standard Contractual Clauses, e.g. Ireland" }
+      ]
+    },
+    {
+      "id": "partnership-agreement",
+      "filename": "Partnership-Agreement.md",
+      "title": "Partnership Agreement",
+      "parties": ["Company", "Partner"],
+      "fields": [
+        { "key": "effectiveDate", "label": "Effective Date", "kind": "date", "required": true, "description": "When the agreement takes effect" },
+        { "key": "obligations", "label": "Obligations", "kind": "long", "required": true, "description": "What each party will do under the partnership" },
+        { "key": "territory", "label": "Territory", "required": true, "description": "Where the partnership applies, e.g. North America" },
+        { "key": "paymentSchedule", "label": "Payment Schedule", "kind": "long", "required": true, "description": "Fees, revenue share or payments between the parties, or None" },
+        { "key": "paymentProcess", "label": "Payment Process", "description": "How payments are made, e.g. invoiced quarterly, due within 30 days" },
+        { "key": "endDate", "label": "End Date", "required": true, "description": "When the partnership ends, e.g. 2 years from the Effective Date" },
+        { "key": "brandGuidelines", "label": "Brand Guidelines", "description": "Guidelines for using each party's trademarks" },
+        { "key": "generalCapAmount", "label": "General Cap Amount", "required": true, "description": "Limit of liability, e.g. $100,000" },
+        { "key": "governingLaw", "label": "Governing Law", "required": true, "description": "US state whose law governs, e.g. Delaware" },
+        { "key": "chosenCourts", "label": "Chosen Courts", "required": true, "description": "Courts for disputes, e.g. courts located in New Castle, DE" }
+      ]
+    },
+    {
+      "id": "pilot-agreement",
+      "filename": "Pilot-Agreement.md",
+      "title": "Pilot Agreement",
+      "parties": ["Provider", "Customer"],
+      "fields": [
+        { "key": "effectiveDate", "label": "Effective Date", "kind": "date", "required": true, "description": "When the pilot agreement takes effect" },
+        { "key": "product", "label": "Product", "kind": "long", "required": true, "description": "The product being piloted" },
+        { "key": "pilotPeriod", "label": "Pilot Period", "required": true, "description": "How long the pilot runs, e.g. 90 days from the Effective Date" },
+        { "key": "fees", "label": "Fees", "description": "Any pilot fees, or None" },
+        { "key": "generalCapAmount", "label": "General Cap Amount", "required": true, "description": "Limit of liability, e.g. $10,000" },
+        { "key": "governingLaw", "label": "Governing Law", "required": true, "description": "US state whose law governs, e.g. Delaware" },
+        { "key": "chosenCourts", "label": "Chosen Courts", "required": true, "description": "Courts for disputes, e.g. courts located in New Castle, DE" }
+      ]
+    },
+    {
+      "id": "professional-services-agreement",
+      "filename": "psa.md",
+      "title": "Professional Services Agreement",
+      "parties": ["Provider", "Customer"],
+      "fields": [
+        { "key": "effectiveDate", "label": "Effective Date", "kind": "date", "required": true, "description": "When the agreement takes effect" },
+        { "key": "deliverables", "label": "Deliverables", "kind": "long", "required": true, "description": "The services and deliverables in the first Statement of Work" },
+        { "key": "fees", "label": "Fees", "kind": "long", "required": true, "description": "Fees for the services, e.g. fixed fee or hourly rates" },
+        { "key": "paymentPeriod", "label": "Payment Period", "required": true, "description": "When invoices are due, e.g. 30 days from invoice" },
+        { "key": "sowTerm", "label": "SOW Term", "required": true, "description": "How long the Statement of Work lasts, e.g. until the Deliverables are accepted" },
+        { "key": "customerObligations", "label": "Customer Obligations", "kind": "long", "description": "What the Customer must provide, e.g. access to systems and staff" },
+        { "key": "insuranceMinimums", "label": "Insurance Minimums", "description": "Insurance the Provider must carry, or None" },
+        { "key": "generalCapAmount", "label": "General Cap Amount", "required": true, "description": "Limit of liability, e.g. fees paid or payable in the 12 months before the claim" },
+        { "key": "governingLaw", "label": "Governing Law", "required": true, "description": "US state whose law governs, e.g. Delaware" },
+        { "key": "chosenCourts", "label": "Chosen Courts", "required": true, "description": "Courts for disputes, e.g. courts located in New Castle, DE" }
+      ]
+    },
+    {
+      "id": "service-level-agreement",
+      "filename": "sla.md",
+      "title": "Service Level Agreement",
+      "parties": ["Provider", "Customer"],
+      "fields": [
+        { "key": "agreement", "label": "Agreement", "required": true, "description": "The cloud service agreement this SLA applies to" },
+        { "key": "effectiveDate", "label": "Effective Date", "kind": "date", "required": true, "description": "When the SLA takes effect" },
+        { "key": "targetUptime", "label": "Target Uptime", "required": true, "description": "Monthly availability commitment, e.g. 99.9%" },
+        { "key": "targetResponseTime", "label": "Target Response Time", "required": true, "description": "How quickly support requests are answered, e.g. 4 business hours" },
+        { "key": "supportChannel", "label": "Support Channel", "required": true, "description": "Where support requests are sent, e.g. support@provider.com" },
+        { "key": "uptimeCredit", "label": "Uptime Credit", "required": true, "description": "Service credit when uptime falls below target, e.g. 10% of monthly fees" },
+        { "key": "responseTimeCredit", "label": "Response Time Credit", "required": true, "description": "Service credit when response time is missed, e.g. 5% of monthly fees" },
+        { "key": "scheduledDowntime", "label": "Scheduled Downtime", "description": "Planned maintenance windows excluded from uptime" }
+      ]
+    },
+    {
+      "id": "software-license-agreement",
+      "filename": "Software-License-Agreement.md",
+      "title": "Software License Agreement",
+      "parties": ["Provider", "Customer"],
+      "fields": [
+        { "key": "effectiveDate", "label": "Effective Date", "kind": "date", "required": true, "description": "When the agreement takes effect" },
+        { "key": "software", "label": "Software", "kind": "long", "required": true, "description": "The software being licensed" },
+        { "key": "permittedUses", "label": "Permitted Uses", "kind": "long", "required": true, "description": "What the Customer may use the software for" },
+        { "key": "licenseLimits", "label": "License Limits", "description": "Limits such as number of users, seats or installations" },
+        { "key": "subscriptionPeriod", "label": "Subscription Period", "required": true, "description": "Length of the license term, e.g. 1 year from the Effective Date" },
+        { "key": "nonRenewalNoticeDate", "label": "Non-Renewal Notice Date", "description": "How far before renewal a party must give notice not to renew", "default": "30 days before the end of the Subscription Period." },
+        { "key": "fees", "label": "Fees", "kind": "long", "required": true, "description": "License fees and pricing" },
+        { "key": "paymentProcess", "label": "Payment Process", "required": true, "description": "How and when the Customer pays, e.g. invoiced annually, due within 30 days" },
+        { "key": "warrantyPeriod", "label": "Warranty Period", "description": "How long the software warranty lasts, e.g. 90 days" },
+        { "key": "generalCapAmount", "label": "General Cap Amount", "required": true, "description": "Limit of liability, e.g. fees paid or payable in the 12 months before the claim" },
+        { "key": "governingLaw", "label": "Governing Law", "required": true, "description": "US state whose law governs, e.g. Delaware" },
+        { "key": "chosenCourts", "label": "Chosen Courts", "required": true, "description": "Courts for disputes, e.g. courts located in New Castle, DE" }
+      ]
+    },
+    {
+      "id": "business-associate-agreement",
+      "filename": "BAA.md",
+      "title": "Business Associate Agreement",
+      "parties": ["Provider", "Company"],
+      "fields": [
+        { "key": "agreement", "label": "Agreement", "required": true, "description": "The underlying services agreement this BAA supplements" },
+        { "key": "baaEffectiveDate", "label": "BAA Effective Date", "kind": "date", "required": true, "description": "When the BAA takes effect" },
+        { "key": "breachNotificationPeriod", "label": "Breach Notification Period", "required": true, "description": "How quickly the Provider reports a breach, e.g. 30 days after discovery" },
+        { "key": "limitations", "label": "Limitations", "kind": "long", "description": "Restrictions on the Provider's use of PHI, e.g. no offshoring or de-identification", "default": "None." }
+      ]
+    },
+    {
+      "id": "ai-addendum",
+      "filename": "AI-Addendum.md",
+      "title": "AI Addendum",
+      "parties": ["Provider", "Customer"],
+      "fields": [
+        { "key": "agreement", "label": "Agreement", "required": true, "description": "The underlying services agreement this addendum supplements" },
+        { "key": "effectiveDate", "label": "Effective Date", "kind": "date", "required": true, "description": "When the addendum takes effect" },
+        { "key": "trainingData", "label": "Training Data", "kind": "long", "required": true, "description": "Customer data the Provider may use to train models, or None" },
+        { "key": "trainingPurposes", "label": "Training Purposes", "kind": "long", "required": true, "description": "What models may be trained for, or None" },
+        { "key": "trainingRestrictions", "label": "Training Restrictions", "kind": "long", "description": "Limits on training, e.g. no training of models shared with other customers" },
+        { "key": "improvementRestrictions", "label": "Improvement Restrictions", "kind": "long", "description": "Limits on using Customer data to improve the Provider's services" }
+      ]
+    }
+  ]
+}

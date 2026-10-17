@@ -1,0 +1,104 @@
+// Document specs (from documents.json) and the text helpers shared by the HTML
+// preview and the PDF export, so both always render the same document.
+
+import type { Clause } from "./templates";
+
+export type FieldSpec = {
+  key: string;
+  label: string;
+  description: string;
+  kind?: "text" | "long" | "date";
+  required?: boolean;
+  default?: string;
+};
+
+export type DocumentSpec = {
+  id: string;
+  filename: string;
+  title: string;
+  parties: [string, string];
+  intro?: string;
+  signingStatement?: string;
+  fields: FieldSpec[];
+};
+
+/** A spec together with its parsed standard terms. */
+export type LegalDocument = DocumentSpec & { clauses: Clause[]; attribution: string };
+
+export type Party = {
+  name: string;
+  title: string;
+  company: string;
+  noticeAddress: string;
+};
+
+export type DocumentData = {
+  documentType: string | null; // null until the AI has established which document to draft
+  values: Record<string, string>;
+  parties: [Party, Party];
+};
+
+const emptyParty = (): Party => ({ name: "", title: "", company: "", noticeAddress: "" });
+
+export const emptyDocument: DocumentData = { documentType: null, values: {}, parties: [emptyParty(), emptyParty()] };
+
+export function introText(doc: DocumentSpec): string {
+  return (
+    doc.intro ??
+    `This ${doc.title} consists of: (1) this Cover Page (“Cover Page”) and (2) the Common Paper ${doc.title} Standard Terms set out below (“Standard Terms”). Any modifications of the Standard Terms should be made on the Cover Page, which will control over conflicts with the Standard Terms.`
+  );
+}
+
+export function signingStatement(doc: DocumentSpec): string {
+  return doc.signingStatement ?? `By signing this Cover Page, each party agrees to enter into this ${doc.title}.`;
+}
+
+export function formatDate(isoDate: string): string {
+  // Parse as local midnight so the displayed day never shifts with the time zone.
+  return new Date(`${isoDate}T00:00:00`).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+export type CoverPageSection = { heading: string; value: string };
+
+/** The key terms, with [placeholders] for missing required values and "None." for blank optional ones. */
+export function coverPageSections(doc: DocumentSpec, data: DocumentData): CoverPageSection[] {
+  return doc.fields.map((field) => {
+    const value = data.values[field.key]?.trim() ?? "";
+    if (!value) return { heading: field.label, value: field.required ? `[${field.label}]` : "None." };
+    return { heading: field.label, value: field.kind === "date" ? formatDate(value) : value };
+  });
+}
+
+export type PartyRow = { label: string; values: [string, string] };
+
+/** Signature table rows; Signature and Date are left blank for signing. */
+export function partyRows(data: DocumentData): PartyRow[] {
+  const [a, b] = data.parties;
+  const row = (label: string, pick: (p: Party) => string): PartyRow => ({
+    label,
+    values: [pick(a), pick(b)],
+  });
+  return [
+    row("Signature", () => ""),
+    row("Print Name", (p) => p.name),
+    row("Title", (p) => p.title),
+    row("Company", (p) => p.company),
+    row("Notice Address", (p) => p.noticeAddress),
+    row("Date", () => ""),
+  ];
+}
+
+const slug = (text: string) =>
+  text
+    .trim()
+    .replace(/[^\w-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+export function pdfFileName(doc: DocumentSpec, data: DocumentData): string {
+  const companies = data.parties.map((p) => slug(p.company)).filter(Boolean);
+  return [slug(doc.title), ...companies].join("_") + ".pdf";
+}

@@ -1,13 +1,13 @@
 // Client for the FastAPI backend. The frontend is served by the same server,
 // so requests use relative /api paths.
 
-import type { NdaData } from "./nda";
+import type { DocumentData } from "./documents";
 
 export type User = { id: number; name: string; email: string };
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
-export type ChatResponse = { reply: string; nda: NdaData; complete: boolean };
+export type ChatResponse = { reply: string; document: DocumentData; complete: boolean };
 
 export class ApiError extends Error {
   constructor(
@@ -39,7 +39,7 @@ export async function signIn(name: string, email: string): Promise<User> {
   }
 }
 
-/** Sends the whole conversation and the current fields; the backend is stateless. */
-export function sendChat(messages: ChatMessage[], nda: NdaData): Promise<ChatResponse> {
-  return postJson<ChatResponse>("/api/chat", { messages, nda });
+/** Sends the whole conversation and the current document; the backend is stateless. */
+export function sendChat(messages: ChatMessage[], document: DocumentData): Promise<ChatResponse> {
+  return postJson<ChatResponse>("/api/chat", { messages, document });
 }

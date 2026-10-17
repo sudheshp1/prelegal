@@ -1,14 +1,15 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import {
-  COVER_PAGE_INTRO,
-  SIGNING_STATEMENT,
   coverPageSections,
+  introText,
   partyRows,
-  type NdaData,
-} from "@/lib/nda";
-import type { Segment, StandardTerms } from "@/lib/standardTerms";
+  signingStatement,
+  type DocumentData,
+  type LegalDocument,
+} from "@/lib/documents";
+import type { Segment } from "@/lib/templates";
 
-// PDF counterpart of NdaPreview. Only loaded on demand by the download button.
+// PDF counterpart of DocumentPreview. Only loaded on demand by the download button.
 
 const styles = StyleSheet.create({
   page: { padding: 56, fontFamily: "Times-Roman", fontSize: 10.5, lineHeight: 1.45 },
@@ -20,11 +21,13 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row" },
   cell: { flex: 2, minHeight: 24, padding: 5, borderRightWidth: 1, borderBottomWidth: 1, borderColor: "#999" },
   labelCell: { flex: 1, fontFamily: "Times-Bold" },
-  headerCell: { fontFamily: "Times-Bold", textAlign: "center" },
+  headerCell: { fontFamily: "Times-Bold", textAlign: "center", textTransform: "uppercase" },
   bold: { fontFamily: "Times-Bold" },
   ref: { textDecoration: "underline" },
   attribution: { marginTop: 12, fontSize: 8.5, color: "#555" },
 });
+
+const INDENT_PER_LEVEL = 18;
 
 function SegmentText({ segment }: { segment: Segment }) {
   if (segment.kind === "bold") return <Text style={styles.bold}>{segment.text}</Text>;
@@ -32,27 +35,30 @@ function SegmentText({ segment }: { segment: Segment }) {
   return <Text>{segment.text}</Text>;
 }
 
-export default function NdaPdf({ data, terms }: { data: NdaData; terms: StandardTerms }) {
+export default function DocumentPdf({ doc, data }: { doc: LegalDocument; data: DocumentData }) {
   return (
-    <Document title="Mutual Non-Disclosure Agreement">
+    <Document title={doc.title}>
       <Page size="LETTER" style={styles.page}>
-        <Text style={styles.title}>Mutual Non-Disclosure Agreement</Text>
-        <Text style={styles.paragraph}>{COVER_PAGE_INTRO}</Text>
+        <Text style={styles.title}>{doc.title}</Text>
+        <Text style={styles.paragraph}>{introText(doc)}</Text>
 
-        {coverPageSections(data).map(({ heading, value }) => (
+        {coverPageSections(doc, data).map(({ heading, value }) => (
           <View key={heading} style={styles.section}>
             <Text style={styles.heading}>{heading}</Text>
             <Text>{value}</Text>
           </View>
         ))}
 
-        <Text style={styles.paragraph}>{SIGNING_STATEMENT}</Text>
+        <Text style={styles.paragraph}>{signingStatement(doc)}</Text>
 
         <View style={styles.table} wrap={false}>
           <View style={styles.row}>
             <Text style={[styles.cell, styles.labelCell]} />
-            <Text style={[styles.cell, styles.headerCell]}>PARTY 1</Text>
-            <Text style={[styles.cell, styles.headerCell]}>PARTY 2</Text>
+            {doc.parties.map((role) => (
+              <Text key={role} style={[styles.cell, styles.headerCell]}>
+                {role}
+              </Text>
+            ))}
           </View>
           {partyRows(data).map(({ label, values }) => (
             <View key={label} style={styles.row}>
@@ -69,15 +75,15 @@ export default function NdaPdf({ data, terms }: { data: NdaData; terms: Standard
 
       <Page size="LETTER" style={styles.page}>
         <Text style={styles.title}>Standard Terms</Text>
-        {terms.clauses.map((clause) => (
-          <Text key={clause.number} style={styles.paragraph}>
-            {clause.number}. <Text style={styles.bold}>{clause.title}</Text>.{" "}
+        {doc.clauses.map((clause, index) => (
+          <Text key={index} style={[styles.paragraph, { marginLeft: clause.depth * INDENT_PER_LEVEL }]}>
+            {clause.number}{" "}
             {clause.body.map((segment, i) => (
               <SegmentText key={i} segment={segment} />
             ))}
           </Text>
         ))}
-        <Text style={styles.attribution}>{terms.attribution}</Text>
+        <Text style={styles.attribution}>{doc.attribution}</Text>
       </Page>
     </Document>
   );
