@@ -10,7 +10,7 @@ type Props = {
   onSend: (text: string) => Promise<boolean>; // resolves false when the message was not sent
 };
 
-export default function NdaChat({ messages, pending, error, onSend }: Props) {
+export default function Chat({ messages, pending, error, onSend }: Props) {
   const [draft, setDraft] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const listRef = useRef<HTMLOListElement>(null);

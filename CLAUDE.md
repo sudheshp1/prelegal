@@ -8,7 +8,7 @@ The available documents are covered in the catalog.json file in the project root
 
 @catalog.json
 
-The current implementation drafts the Mutual NDA via AI chat (see Implementation Status below); the rest of the document catalog is still to come.
+The current implementation drafts all 11 documents in the catalog via AI chat (see Implementation Status below).
 
 ## Development process
 
@@ -72,14 +72,19 @@ Backend available at http://localhost:8000
 ### Completed (KAN-8) - AI chat for the Mutual NDA
 - The manual NDA form is replaced by a freeform AI chat (left) next to the live preview (right)
 - `POST /api/chat` is stateless: the client sends the whole conversation plus the current fields; the backend calls `gpt-6-luna` with Structured Outputs (`AiTurn` = reply + nullable field `updates`), merges the non-null updates and returns `{reply, nda, complete}`
-- Field model, merge and the required-field check live in `backend/app/nda.py` (mirrors `frontend/lib/nda.ts`, camelCase on the wire)
+- Field model, merge and the required-field check lived in `backend/app/nda.py` (generalised into `backend/app/documents.py` in KAN-9)
 - The greeting is shown locally (no API call); Download PDF appears only once all required fields are filled
 - Live OpenAI test: `cd backend && uv run --env-file ../.env pytest -k live` (skipped without a key)
 
+### Completed (KAN-9) - all supported document types
+- `documents.json` (project root) is the single source of truth for each document: id, catalog `filename`, title, party roles, optional intro/signing text, and curated fields (`key`, `label`, `description`, `kind` text/long/date, `required`, `default`). The backend reads it at runtime (descriptions joined from catalog.json); the frontend reads it at build time. Adding or changing a document is a documents.json edit.
+- Chat is generic: the AI detects the document from the conversation (`documentType` in the structured output), offers the closest supported document for unsupported requests, and switching type starts the new document fresh. `backend/app/documents.py` holds the models, `merge()` and `missing_fields()`.
+- Generic rendering: a generated Key Terms cover page + signature table, then the full standard terms parsed by `frontend/lib/templates.ts` (nested numbered clauses, header/link spans). `DocumentPreview`/`DocumentPdf` replace the NDA-specific components.
+
 ### Not yet implemented
-- Other document types, real authentication, document persistence
+- Real authentication, document persistence
 
 ### Current API Endpoints
 - `GET /api/health` - Health check
 - `POST /api/auth/signin` - Placeholder sign-in `{name, email}`; returns `{id, name, email}`
-- `POST /api/chat` - `{messages, nda}` -> `{reply, nda, complete}`; 502 if the AI call fails, 503 if no API key
+- `POST /api/chat` - `{messages, document}` -> `{reply, document, complete}`; 502 if the AI call fails, 503 if no API key

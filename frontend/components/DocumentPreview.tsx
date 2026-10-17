@@ -1,13 +1,14 @@
 import {
-  COVER_PAGE_INTRO,
-  SIGNING_STATEMENT,
   coverPageSections,
+  introText,
   partyRows,
-  type NdaData,
-} from "@/lib/nda";
-import type { Segment, StandardTerms } from "@/lib/standardTerms";
+  signingStatement,
+  type DocumentData,
+  type LegalDocument,
+} from "@/lib/documents";
+import type { Segment } from "@/lib/templates";
 
-type Props = { data: NdaData; terms: StandardTerms };
+type Props = { doc: LegalDocument; data: DocumentData };
 
 function SegmentText({ segment }: { segment: Segment }) {
   if (segment.kind === "bold") return <strong>{segment.text}</strong>;
@@ -15,14 +16,14 @@ function SegmentText({ segment }: { segment: Segment }) {
   return <>{segment.text}</>;
 }
 
-export default function NdaPreview({ data, terms }: Props) {
+export default function DocumentPreview({ doc, data }: Props) {
   return (
     <article className="space-y-6 font-serif text-[13px] leading-relaxed text-slate-900">
-      <h3 className="text-center text-xl font-bold">Mutual Non-Disclosure Agreement</h3>
-      <p>{COVER_PAGE_INTRO}</p>
+      <h3 className="text-center text-xl font-bold">{doc.title}</h3>
+      <p>{introText(doc)}</p>
 
       <dl className="space-y-3">
-        {coverPageSections(data).map(({ heading, value }) => (
+        {coverPageSections(doc, data).map(({ heading, value }) => (
           <div key={heading}>
             <dt className="font-bold">{heading}</dt>
             <dd className="whitespace-pre-wrap">{value}</dd>
@@ -30,14 +31,17 @@ export default function NdaPreview({ data, terms }: Props) {
         ))}
       </dl>
 
-      <p>{SIGNING_STATEMENT}</p>
+      <p>{signingStatement(doc)}</p>
 
       <table className="w-full border-collapse text-left">
         <thead>
           <tr>
             <th className="w-1/4 border border-slate-300 p-2" />
-            <th className="border border-slate-300 p-2 text-center">PARTY 1</th>
-            <th className="border border-slate-300 p-2 text-center">PARTY 2</th>
+            {doc.parties.map((role) => (
+              <th key={role} className="border border-slate-300 p-2 text-center uppercase">
+                {role}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -55,18 +59,18 @@ export default function NdaPreview({ data, terms }: Props) {
       </table>
 
       <h3 className="pt-4 text-center text-lg font-bold">Standard Terms</h3>
-      <ol className="space-y-3">
-        {terms.clauses.map((clause) => (
-          <li key={clause.number}>
-            {clause.number}. <strong>{clause.title}</strong>.{" "}
+      <div className="space-y-3">
+        {doc.clauses.map((clause, index) => (
+          <p key={index} style={{ marginLeft: `${clause.depth * 1.25}rem` }}>
+            {clause.number}{" "}
             {clause.body.map((segment, i) => (
               <SegmentText key={i} segment={segment} />
             ))}
-          </li>
+          </p>
         ))}
-      </ol>
+      </div>
 
-      <p className="text-xs text-slate-500">{terms.attribution}</p>
+      <p className="text-xs text-slate-500">{doc.attribution}</p>
     </article>
   );
 }

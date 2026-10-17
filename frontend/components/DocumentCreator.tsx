@@ -2,27 +2,26 @@
 
 import { useState } from "react";
 import { sendChat, type ChatMessage } from "@/lib/api";
-import { defaultNdaData, pdfFileName, type NdaData } from "@/lib/nda";
-import type { StandardTerms } from "@/lib/standardTerms";
-import NdaChat from "./NdaChat";
-import NdaPreview from "./NdaPreview";
+import { emptyDocument, pdfFileName, type DocumentData, type LegalDocument } from "@/lib/documents";
+import Chat from "./Chat";
+import DocumentPreview from "./DocumentPreview";
 
-async function downloadPdf(data: NdaData, terms: StandardTerms) {
+async function downloadPdf(doc: LegalDocument, data: DocumentData) {
   // Load the PDF renderer only when needed; it is large and browser-only.
-  const [{ pdf }, { default: NdaPdf }] = await Promise.all([
+  const [{ pdf }, { default: DocumentPdf }] = await Promise.all([
     import("@react-pdf/renderer"),
-    import("./NdaPdf"),
+    import("./DocumentPdf"),
   ]);
-  const blob = await pdf(<NdaPdf data={data} terms={terms} />).toBlob();
+  const blob = await pdf(<DocumentPdf doc={doc} data={data} />).toBlob();
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = pdfFileName(data);
+  link.download = pdfFileName(doc, data);
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// Only recent messages are sent: the current fields carry everything gathered so far,
+// Only recent messages are sent: the current document carries everything gathered so far,
 // and this keeps long chats within the backend's request limits.
 export const MAX_HISTORY = 40;
 
@@ -30,16 +29,18 @@ export const MAX_HISTORY = 40;
 export const GREETING: ChatMessage = {
   role: "assistant",
   content:
-    "Hi! I'll help you draft a Mutual Non-Disclosure Agreement. To start, which two companies are entering into the NDA?",
+    "Hi! I can help you draft common legal agreements, such as NDAs, cloud service, pilot, data processing and software license agreements. What would you like to create?",
 };
 
-export default function NdaCreator({ terms }: { terms: StandardTerms }) {
-  const [data, setData] = useState<NdaData>(defaultNdaData);
+export default function DocumentCreator({ documents }: { documents: LegalDocument[] }) {
+  const [data, setData] = useState<DocumentData>(emptyDocument);
   const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
   const [complete, setComplete] = useState(false);
   const [pending, setPending] = useState(false);
   const [chatError, setChatError] = useState("");
   const [pdfStatus, setPdfStatus] = useState<"idle" | "generating" | "error">("idle");
+
+  const doc = documents.find((d) => d.id === data.documentType);
 
   const handleSend = async (text: string) => {
     const history: ChatMessage[] = [...messages, { role: "user", content: text }];
@@ -49,12 +50,12 @@ export default function NdaCreator({ terms }: { terms: StandardTerms }) {
     try {
       const response = await sendChat(history.slice(-MAX_HISTORY), data);
       setMessages([...history, { role: "assistant", content: response.reply }]);
-      setData(response.nda);
+      setData(response.document);
       setComplete(response.complete);
       return true;
     } catch (error) {
       console.error(error);
-      setMessages(messages); // drop the unanswered message; NdaChat puts it back in the input
+      setMessages(messages); // drop the unanswered message; Chat puts it back in the input
       setChatError("Sorry, I couldn't get a reply. Please try again.");
       return false;
     } finally {
@@ -63,9 +64,10 @@ export default function NdaCreator({ terms }: { terms: StandardTerms }) {
   };
 
   const handleDownload = async () => {
+    if (!doc) return;
     setPdfStatus("generating");
     try {
-      await downloadPdf(data, terms);
+      await downloadPdf(doc, data);
       setPdfStatus("idle");
     } catch (error) {
       console.error(error);
@@ -79,15 +81,15 @@ export default function NdaCreator({ terms }: { terms: StandardTerms }) {
         <h2 id="chat-heading" className="text-lg font-semibold text-slate-900">
           Chat
         </h2>
-        <NdaChat messages={messages} pending={pending} error={chatError} onSend={handleSend} />
+        <Chat messages={messages} pending={pending} error={chatError} onSend={handleSend} />
       </section>
 
       <section aria-labelledby="preview-heading" className="space-y-4">
         <div className="flex items-center justify-between gap-4">
           <h2 id="preview-heading" className="text-lg font-semibold text-slate-900">
-            Preview
+            {doc ? doc.title : "Preview"}
           </h2>
-          {complete ? (
+          {doc && complete ? (
             <button
               type="button"
               onClick={handleDownload}
@@ -98,7 +100,7 @@ export default function NdaCreator({ terms }: { terms: StandardTerms }) {
               {pdfStatus === "generating" ? "Generating…" : "Download PDF"}
             </button>
           ) : (
-            <p className="text-sm text-brand-gray">Download is available once all details are gathered.</p>
+            doc && <p className="text-sm text-brand-gray">Download is available once all details are gathered.</p>
           )}
         </div>
         {pdfStatus === "error" && (
@@ -107,7 +109,13 @@ export default function NdaCreator({ terms }: { terms: StandardTerms }) {
           </p>
         )}
         <div className="max-h-[75vh] overflow-y-auto rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-          <NdaPreview data={data} terms={terms} />
+          {doc ? (
+            <DocumentPreview doc={doc} data={data} />
+          ) : (
+            <p className="py-24 text-center text-sm text-brand-gray">
+              Your document will appear here once you and the assistant have chosen what to draft.
+            </p>
+          )}
         </div>
       </section>
     </div>
