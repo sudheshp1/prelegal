@@ -2,7 +2,8 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { emptyDocument, type DocumentData, type LegalDocument } from "@/lib/documents";
-import DocumentCreator, { GREETING, MAX_HISTORY } from "./DocumentCreator";
+import { mockApi } from "@/test/mockApi";
+import DocumentCreator, { GREETING } from "./DocumentCreator";
 
 const pilot: LegalDocument = {
   id: "pilot-agreement",
@@ -23,13 +24,9 @@ const pilotDocument = (values: Record<string, string> = {}): DocumentData => ({
   values: { pilotPeriod: "", fees: "", ...values },
 });
 
-function reply(content: string, document: DocumentData = emptyDocument, complete = false) {
-  return vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
-    ok: true,
-    status: 200,
-    json: async () => ({ reply: content, document, complete }),
-  } as Response);
-}
+const reply = (content: string, document: DocumentData = emptyDocument, complete = false, documentId = 7) => ({
+  body: { documentId, reply: content, document, complete },
+});
 
 async function say(text: string) {
   const user = userEvent.setup();
@@ -38,48 +35,96 @@ async function say(text: string) {
   await user.click(screen.getByRole("button", { name: "Send" }));
 }
 
-const renderCreator = () => render(<DocumentCreator documents={[pilot]} />);
+function renderCreator(initialDocumentId: number | null = null) {
+  const onSaved = vi.fn();
+  render(<DocumentCreator documents={[pilot]} initialDocumentId={initialDocumentId} onSaved={onSaved} />);
+  return { onSaved };
+}
+
 const conversation = () => within(screen.getByRole("list", { name: "Conversation" }));
 
 describe("DocumentCreator", () => {
   it("greets the user without calling the API and waits for a document choice", () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch");
+    const api = mockApi({});
     renderCreator();
 
     expect(conversation().getByText(GREETING.content)).toBeInTheDocument();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(api).not.toHaveBeenCalled();
     expect(screen.getByText(/Your document will appear here/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Download PDF" })).not.toBeInTheDocument();
+    expect(screen.getByRole("note")).toHaveTextContent("Draft — subject to legal review");
   });
 
-  it("shows the chosen document's preview once the AI picks a type", async () => {
-    const fetchMock = reply("Great, a Pilot Agreement. How long is the pilot?", pilotDocument());
-    renderCreator();
+  it("starts a new document and keeps chatting in it", async () => {
+    const requests: unknown[] = [];
+    mockApi({
+      "POST /api/chat": (body) => {
+        requests.push(body);
+        return requests.length === 1
+          ? reply("Great, a Pilot Agreement. How long is the pilot?", pilotDocument())
+          : reply("Thanks!", pilotDocument({ pilotPeriod: "90 days" }));
+      },
+    });
+    const { onSaved } = renderCreator();
 
     await say("I want to run a pilot with a customer");
-
     expect(await conversation().findByText(/How long is the pilot/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Pilot Agreement", level: 2 })).toBeInTheDocument();
     expect(screen.getByText("[Pilot Period]")).toBeInTheDocument();
-    expect(screen.getByText(/Download is available once/)).toBeInTheDocument();
+    expect(onSaved).toHaveBeenCalledWith(7);
 
-    const body = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
-    expect(body.messages).toEqual([GREETING, { role: "user", content: "I want to run a pilot with a customer" }]);
-    expect(body.document).toEqual(emptyDocument);
+    await say("90 days");
+    expect(await conversation().findByText("Thanks!")).toBeInTheDocument();
+
+    expect(requests).toEqual([
+      { documentId: null, message: "I want to run a pilot with a customer" },
+      { documentId: 7, message: "90 days" },
+    ]);
   });
 
-  it("updates the preview and offers the PDF once complete", async () => {
-    reply("All done! You can download it.", pilotDocument({ pilotPeriod: "90 days" }), true);
+  it("reopens a saved document with its conversation", async () => {
+    mockApi({
+      "GET /api/documents/3": {
+        body: {
+          id: 3,
+          title: "Pilot Agreement",
+          companies: [],
+          complete: true,
+          updatedAt: "2026-10-17T10:00:00Z",
+          document: pilotDocument({ pilotPeriod: "90 days" }),
+          messages: [
+            { role: "user", content: "A 90 day pilot" },
+            { role: "assistant", content: "All done!" },
+          ],
+        },
+      },
+    });
+    renderCreator(3);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Opening document");
+    expect(await screen.findByText("All done!")).toBeInTheDocument();
+    expect(conversation().getByText(GREETING.content)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download PDF" })).toBeInTheDocument();
+    expect(screen.getByText("90 days", { selector: "dd" })).toBeInTheDocument();
+  });
+
+  it("explains when a saved document can't be opened", async () => {
+    mockApi({ "GET /api/documents/3": { status: 404, body: { detail: "Document not found." } } });
+    renderCreator(3);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't open this document");
+  });
+
+  it("offers the PDF once the document is complete", async () => {
+    mockApi({ "POST /api/chat": reply("All done!", pilotDocument({ pilotPeriod: "90 days" }), true) });
     renderCreator();
 
     await say("90 days");
 
     expect(await screen.findByRole("button", { name: "Download PDF" })).toBeInTheDocument();
-    expect(screen.getByText("90 days", { selector: "dd" })).toBeInTheDocument();
   });
 
   it("restores the message and shows an error when the AI is unavailable", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({ ok: false, status: 502 } as Response);
+    mockApi({ "POST /api/chat": { status: 502, body: { detail: "The AI assistant is unavailable." } } });
     renderCreator();
 
     await say("An NDA please");
@@ -89,20 +134,11 @@ describe("DocumentCreator", () => {
     expect(conversation().queryByText("An NDA please")).not.toBeInTheDocument();
   });
 
-  it("sends on Enter and focuses the input after the reply", async () => {
-    reply("Thanks!");
-    renderCreator();
-
-    await userEvent.type(screen.getByLabelText("Message"), "Acme{Enter}");
-
-    expect(await conversation().findByText("Thanks!")).toBeInTheDocument();
-    expect(screen.getByLabelText("Message")).toHaveValue("");
-    expect(screen.getByLabelText("Message")).toHaveFocus();
-  });
-
   it("locks the input while waiting for a reply", async () => {
-    let respond!: (response: Response) => void;
-    vi.spyOn(globalThis, "fetch").mockReturnValueOnce(new Promise((resolve) => (respond = resolve)));
+    let respond!: () => void;
+    mockApi({
+      "POST /api/chat": () => new Promise((resolve) => (respond = () => resolve(reply("Thanks!")))),
+    });
     renderCreator();
 
     await say("Acme");
@@ -110,38 +146,20 @@ describe("DocumentCreator", () => {
     expect(screen.getByLabelText("Message")).toBeDisabled();
     expect(conversation().getByText("Thinking…")).toBeInTheDocument();
 
-    respond({ ok: true, status: 200, json: async () => ({ reply: "Thanks!", document: emptyDocument, complete: false }) } as Response);
+    respond();
 
     expect(await conversation().findByText("Thanks!")).toBeInTheDocument();
     expect(screen.getByLabelText("Message")).toBeEnabled();
-  });
-
-  it("sends only the most recent messages", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch");
-    renderCreator();
-
-    for (let turn = 1; turn <= MAX_HISTORY / 2 + 1; turn++) {
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ reply: `Reply ${turn}`, document: emptyDocument, complete: false }),
-      } as Response);
-      await say(`Message ${turn}`);
-      await conversation().findByText(`Reply ${turn}`);
-    }
-
-    const lastBody = JSON.parse(fetchMock.mock.lastCall![1]!.body as string);
-    expect(lastBody.messages).toHaveLength(MAX_HISTORY);
-    expect(lastBody.messages.at(-1)).toEqual({ role: "user", content: `Message ${MAX_HISTORY / 2 + 1}` });
+    expect(screen.getByLabelText("Message")).toHaveFocus();
   });
 
   it("does not send blank messages", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch");
+    const api = mockApi({});
     renderCreator();
 
     await userEvent.type(screen.getByLabelText("Message"), "   {Enter}");
 
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(api).not.toHaveBeenCalled();
   });
 });

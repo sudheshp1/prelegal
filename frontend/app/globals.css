@@ -11,6 +11,8 @@
   --color-brand-purple: #753991;
   --color-brand-navy: #032147;
   --color-brand-gray: #888888;
+  /* A darker shade of the brand gray for small text, meeting WCAG AA contrast (4.5:1+) on white and slate-50. */
+  --color-brand-muted: #5c5c5c;
 }
 
 body {

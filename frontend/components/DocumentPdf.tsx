@@ -1,5 +1,6 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import {
+  DISCLAIMER,
   coverPageSections,
   introText,
   partyRows,
@@ -12,8 +13,10 @@ import type { Segment } from "@/lib/templates";
 // PDF counterpart of DocumentPreview. Only loaded on demand by the download button.
 
 const styles = StyleSheet.create({
-  page: { padding: 56, fontFamily: "Times-Roman", fontSize: 10.5, lineHeight: 1.45 },
+  page: { padding: 56, paddingBottom: 76, fontFamily: "Times-Roman", fontSize: 10.5, lineHeight: 1.45 },
   title: { fontFamily: "Times-Bold", fontSize: 16, textAlign: "center", marginBottom: 14 },
+  draft: { fontFamily: "Times-Bold", fontSize: 9, textAlign: "center", color: "#a16207", marginTop: -8, marginBottom: 14 },
+  footer: { position: "absolute", bottom: 30, left: 56, right: 56, fontSize: 8, color: "#555", textAlign: "center" },
   paragraph: { marginBottom: 10 },
   heading: { fontFamily: "Times-Bold" },
   section: { marginBottom: 8 },
@@ -29,6 +32,15 @@ const styles = StyleSheet.create({
 
 const INDENT_PER_LEVEL = 18;
 
+/** Repeated at the bottom of every page. */
+function Footer() {
+  return (
+    <Text style={styles.footer} fixed>
+      {DISCLAIMER}
+    </Text>
+  );
+}
+
 function SegmentText({ segment }: { segment: Segment }) {
   if (segment.kind === "bold") return <Text style={styles.bold}>{segment.text}</Text>;
   if (segment.kind === "ref") return <Text style={styles.ref}>{segment.text}</Text>;
@@ -40,6 +52,7 @@ export default function DocumentPdf({ doc, data }: { doc: LegalDocument; data: D
     <Document title={doc.title}>
       <Page size="LETTER" style={styles.page}>
         <Text style={styles.title}>{doc.title}</Text>
+        <Text style={styles.draft}>DRAFT — SUBJECT TO LEGAL REVIEW</Text>
         <Text style={styles.paragraph}>{introText(doc)}</Text>
 
         {coverPageSections(doc, data).map(({ heading, value }) => (
@@ -71,6 +84,7 @@ export default function DocumentPdf({ doc, data }: { doc: LegalDocument; data: D
             </View>
           ))}
         </View>
+        <Footer />
       </Page>
 
       <Page size="LETTER" style={styles.page}>
@@ -84,6 +98,7 @@ export default function DocumentPdf({ doc, data }: { doc: LegalDocument; data: D
           </Text>
         ))}
         <Text style={styles.attribution}>{doc.attribution}</Text>
+        <Footer />
       </Page>
     </Document>
   );

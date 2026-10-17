@@ -1,22 +1,22 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useUser } from "@/lib/session";
-import AppHeader from "./AppHeader";
-import LoginScreen from "./LoginScreen";
+import { useAuth } from "@/lib/auth";
+import AuthScreen from "./AuthScreen";
 
-/** Shows the login screen until a user has signed in, then the app with its header. */
+/** Shows the sign-in screen until the server confirms a session, then the app. */
 export default function AuthGate({ children }: { children: ReactNode }) {
-  const user = useUser();
+  const { user } = useAuth();
 
-  // Unknown until the browser's storage is read; render nothing rather than flash the login screen.
-  if (user === undefined) return null;
-  if (user === null) return <LoginScreen />;
-
-  return (
-    <>
-      <AppHeader user={user} />
-      {children}
-    </>
-  );
+  if (user === undefined) {
+    return (
+      <div role="status" className="grid min-h-screen place-items-center text-sm text-brand-muted">
+        <span className="flex items-center gap-3">
+          <span aria-hidden className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-brand-blue" />
+          Loading…
+        </span>
+      </div>
+    );
+  }
+  return user ? children : <AuthScreen />;
 }

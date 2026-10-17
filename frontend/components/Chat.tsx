@@ -35,7 +35,7 @@ export default function Chat({ messages, pending, error, onSend }: Props) {
   };
 
   return (
-    <div className="flex h-[75vh] flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div className="flex h-[70vh] flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
       <ol ref={listRef} aria-label="Conversation" aria-live="polite" className="flex-1 space-y-3 overflow-y-auto p-4">
         {messages.map((message, index) => (
           <li key={index} className={message.role === "user" ? "flex justify-end" : "flex justify-start"}>
@@ -50,7 +50,7 @@ export default function Chat({ messages, pending, error, onSend }: Props) {
         ))}
         {pending && (
           <li className="flex justify-start">
-            <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-brand-gray">Thinking…</p>
+            <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-brand-muted">Thinking…</p>
           </li>
         )}
       </ol>
