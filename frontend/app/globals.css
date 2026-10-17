@@ -4,6 +4,15 @@
   --font-sans: var(--font-geist-sans);
 }
 
+/* Prelegal brand colors, available as e.g. bg-brand-purple / text-brand-navy. */
+@theme {
+  --color-brand-yellow: #ecad0a;
+  --color-brand-blue: #209dd7;
+  --color-brand-purple: #753991;
+  --color-brand-navy: #032147;
+  --color-brand-gray: #888888;
+}
+
 body {
   background: var(--color-slate-50);
   color: var(--color-slate-900);
