@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from app.db import init_db
 from app.main import create_app
+from tests.conftest import sign_up
 
 
 def test_health(client):
@@ -35,10 +36,11 @@ def test_api_works_without_built_frontend(tmp_path, monkeypatch):
 
 
 def test_database_is_recreated_on_startup(client):
-    client.post("/api/auth/signin", json={"name": "Ada", "email": "ada@example.com"})
+    sign_up(client)
 
     init_db()
 
-    # The earlier user was wiped, so the next user starts again at id 1.
-    response = client.post("/api/auth/signin", json={"name": "Grace", "email": "grace@example.com"})
-    assert response.json()["id"] == 1
+    # The earlier account was wiped, so the same email can register again,
+    # and the old session cookie no longer works.
+    assert client.get("/api/auth/me").status_code == 401
+    assert sign_up(client).status_code == 201

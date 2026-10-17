@@ -1,36 +1,36 @@
-"""AI chat that drafts any supported document. Stateless: the client sends the whole conversation each turn."""
+"""AI chat that drafts any supported document. Each turn is saved to the user's document."""
 
 import logging
 from datetime import date
 from functools import lru_cache
-from typing import Annotated, Literal
+from typing import Annotated
 
 import openai
 from fastapi import APIRouter, Depends, HTTPException
 from openai import OpenAI
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import Field, ValidationError
 
+from .auth import User, current_user
+from .db import Db
 from .documents import CamelModel, DocumentData, DocumentUpdates, load_specs, merge, missing_fields
+from .saved_documents import MAX_MESSAGE, ChatMessage, load_document, save_document
 
 MODEL = "gpt-6-luna"
 TIMEOUT_SECONDS = 60
-MAX_MESSAGE = 4000
+# Only recent messages go to the model: the document carries everything gathered so far.
+MAX_HISTORY = 40
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 
-class ChatMessage(BaseModel):
-    role: Literal["user", "assistant"]
-    content: str = Field(min_length=1, max_length=MAX_MESSAGE)
-
-
 class ChatRequest(CamelModel):
-    messages: list[ChatMessage] = Field(min_length=1, max_length=100)
-    document: DocumentData
+    document_id: int | None = None  # None starts a new document
+    message: str = Field(min_length=1, max_length=MAX_MESSAGE)
 
 
 class ChatResponse(CamelModel):
+    document_id: int
     reply: str
     document: DocumentData
     complete: bool
@@ -49,7 +49,8 @@ Supported documents (id: name - description):
 
 Choosing the document:
 - If no document has been chosen yet, find out what the user needs. When it matches a supported \
-document, set `document_type` to its id and start gathering its fields.
+document, set `document_type` to its id and start gathering its fields. In that same turn, record \
+any values the user has already given, using that document's field keys.
 - If the user asks for a document that is not supported, explain that Prelegal can't generate that \
 document, suggest the closest supported document and why it may fit, and ask whether to proceed. \
 Only set `document_type` once they agree.
@@ -86,7 +87,11 @@ Required fields still missing: {missing}"""
 
 
 def _catalog() -> str:
-    return "\n".join(f"- {spec.id}: {spec.title} - {spec.description}" for spec in load_specs().values())
+    # Field keys are listed so values given up front can be recorded in the turn that picks the document.
+    return "\n".join(
+        f"- {spec.id}: {spec.title} - {spec.description} Field keys: {', '.join(f.key for f in spec.fields)}"
+        for spec in load_specs().values()
+    )
 
 
 def _document_section(document: DocumentData) -> str:
@@ -130,8 +135,23 @@ def openai_client() -> OpenAI:
 
 
 @router.post("")
-def chat(body: ChatRequest, client: Annotated[OpenAI, Depends(openai_client)]) -> ChatResponse:
-    messages = [{"role": "system", "content": system_prompt(body.document)}, *(m.model_dump() for m in body.messages)]
+def chat(
+    body: ChatRequest,
+    user: Annotated[User, Depends(current_user)],
+    db: Db,
+    client: Annotated[OpenAI, Depends(openai_client)],
+) -> ChatResponse:
+    if body.document_id is None:
+        document, history = DocumentData(), []
+    else:
+        saved = load_document(db, user, body.document_id)
+        document, history = saved.document, saved.messages
+    history = [*history, ChatMessage(role="user", content=body.message)]
+
+    messages = [
+        {"role": "system", "content": system_prompt(document)},
+        *(m.model_dump() for m in history[-MAX_HISTORY:]),
+    ]
     try:
         response = client.responses.parse(model=MODEL, input=messages, text_format=AiTurn)
     except (openai.OpenAIError, ValidationError) as error:
@@ -143,7 +163,10 @@ def chat(body: ChatRequest, client: Annotated[OpenAI, Depends(openai_client)]) -
     if turn is None:
         raise HTTPException(502, "The AI assistant gave an unexpected response. Please try again.")
 
-    document = merge(body.document, turn)
-    # Capped so the reply can always be sent back as history on the next turn.
+    document = merge(document, turn)
+    complete = not missing_fields(document)
+    # Capped so the reply always fits the stored history's message limit.
     reply = turn.reply.strip()[:MAX_MESSAGE]
-    return ChatResponse(reply=reply, document=document, complete=not missing_fields(document))
+    history.append(ChatMessage(role="assistant", content=reply))
+    document_id = save_document(db, user, body.document_id, document, history, complete)
+    return ChatResponse(document_id=document_id, reply=reply, document=document, complete=complete)

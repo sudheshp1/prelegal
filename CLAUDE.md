@@ -8,7 +8,7 @@ The available documents are covered in the catalog.json file in the project root
 
 @catalog.json
 
-The current implementation drafts all 11 documents in the catalog via AI chat (see Implementation Status below).
+The current implementation drafts all 11 documents in the catalog via AI chat, with user accounts and saved documents (see Implementation Status below).
 
 ## Development process
 
@@ -53,6 +53,7 @@ Backend available at http://localhost:8000
 - Purple Secondary: `#753991` (submit buttons)
 - Dark Navy: `#032147` (headings)
 - Gray Text: `#888888`
+- Muted Text: `#5c5c5c` (`brand-muted`: darker gray for small text and the disclaimer, meeting WCAG AA contrast)
 
 ## Implementation Status
 
@@ -81,10 +82,19 @@ Backend available at http://localhost:8000
 - Chat is generic: the AI detects the document from the conversation (`documentType` in the structured output), offers the closest supported document for unsupported requests, and switching type starts the new document fresh. `backend/app/documents.py` holds the models, `merge()` and `missing_fields()`.
 - Generic rendering: a generated Key Terms cover page + signature table, then the full standard terms parsed by `frontend/lib/templates.ts` (nested numbered clauses, header/link spans). `DocumentPreview`/`DocumentPdf` replace the NDA-specific components.
 
-### Not yet implemented
-- Real authentication, document persistence
+### Completed (KAN-10) - accounts, saved documents and polish
+- Email/password accounts: passwords hashed with stdlib scrypt (per-user salt); server-side sessions in a `sessions` table, sent as an HttpOnly SameSite=Lax cookie (7 days). `current_user` (backend/app/auth.py) protects chat and document routes. Routes take `db: Db` (backend/app/db.py), which commits before the response is sent. The DB is still recreated on every start, which also ends all sessions.
+- The server owns each conversation: `POST /api/chat {documentId?, message}` loads the user's saved document and history, calls the AI, and saves the result (a new document is created on the first message). `backend/app/saved_documents.py` holds the `documents` table access and the documents API.
+- Frontend: `lib/auth.tsx` (AuthProvider/useAuth backed by `/api/auth/me`) replaces the localStorage session; any 401 from a protected route returns the user to sign-in (`setUnauthorizedHandler` in lib/api.ts). Split-screen AuthScreen (sign in / create account), AppShell with a sidebar of saved documents (open, delete, new), header user menu, and footer.
+- Disclaimer (`DISCLAIMER` in frontend/lib/documents.ts): above the preview, in the app footer, on the sign-up screen, and in the footer of every PDF page (plus a DRAFT marker on the cover).
 
 ### Current API Endpoints
 - `GET /api/health` - Health check
-- `POST /api/auth/signin` - Placeholder sign-in `{name, email}`; returns `{id, name, email}`
-- `POST /api/chat` - `{messages, document}` -> `{reply, document, complete}`; 502 if the AI call fails, 503 if no API key
+- `POST /api/auth/signup` - `{name, email, password}` (password 8+ chars); creates the account and signs in; 409 if the email exists
+- `POST /api/auth/signin` - `{email, password}`; sets the session cookie; 401 "Incorrect email or password."
+- `POST /api/auth/signout` - Ends the session
+- `GET /api/auth/me` - Current user, or 401
+- `GET /api/documents` - The user's documents as summaries `{id, title, companies, complete, updatedAt}`, newest first
+- `GET /api/documents/{id}` - Summary plus `document` and `messages`; 404 for other users' documents
+- `DELETE /api/documents/{id}` - Deletes the user's document
+- `POST /api/chat` - `{documentId?, message}` -> `{documentId, reply, document, complete}`; 401 without a session, 502 if the AI call fails, 503 if no API key
