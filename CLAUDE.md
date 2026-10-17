@@ -8,7 +8,7 @@ The available documents are covered in the catalog.json file in the project root
 
 @catalog.json
 
-The current implementation is the v1 technical foundation (see Implementation Status below); AI chat and the full document catalog are still to come.
+The current implementation drafts the Mutual NDA via AI chat (see Implementation Status below); the rest of the document catalog is still to come.
 
 ## Development process
 
@@ -69,9 +69,17 @@ Backend available at http://localhost:8000
 - Start/stop scripts for Mac, Linux, Windows
 - Tests: `cd backend && uv run pytest`, `cd frontend && npm test` (Vitest + Testing Library)
 
+### Completed (KAN-8) - AI chat for the Mutual NDA
+- The manual NDA form is replaced by a freeform AI chat (left) next to the live preview (right)
+- `POST /api/chat` is stateless: the client sends the whole conversation plus the current fields; the backend calls `gpt-6-luna` with Structured Outputs (`AiTurn` = reply + nullable field `updates`), merges the non-null updates and returns `{reply, nda, complete}`
+- Field model, merge and the required-field check live in `backend/app/nda.py` (mirrors `frontend/lib/nda.ts`, camelCase on the wire)
+- The greeting is shown locally (no API call); Download PDF appears only once all required fields are filled
+- Live OpenAI test: `cd backend && uv run --env-file ../.env pytest -k live` (skipped without a key)
+
 ### Not yet implemented
-- AI chat, other document types, real authentication, document persistence
+- Other document types, real authentication, document persistence
 
 ### Current API Endpoints
 - `GET /api/health` - Health check
 - `POST /api/auth/signin` - Placeholder sign-in `{name, email}`; returns `{id, name, email}`
+- `POST /api/chat` - `{messages, nda}` -> `{reply, nda, complete}`; 502 if the AI call fails, 503 if no API key

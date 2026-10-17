@@ -9,6 +9,12 @@ Platform for drafting common legal agreements
 
 Requires [Docker](https://www.docker.com/). The start script builds the image and runs it at http://localhost:8000; if a `.env` file exists in the project root it is passed to the container.
 
+The AI chat needs an OpenAI API key. Create `.env` in the project root containing:
+
+```
+OPENAI_API_KEY=sk-...
+```
+
 ```bash
 # Mac
 scripts/start-mac.sh
@@ -27,7 +33,7 @@ The SQLite database lives inside the container and is recreated on every start.
 
 ## Development
 
-- `backend/` is a [uv](https://docs.astral.sh/uv/) project using FastAPI. Run the tests with `uv run pytest`.
+- `backend/` is a [uv](https://docs.astral.sh/uv/) project using FastAPI. Run the tests with `uv run pytest` (add `--env-file ../.env` after `uv run` to include the live OpenAI test).
 - `frontend/` is a Next.js app built as a static export. Run the tests with `npm test`.
 
-To run without Docker, build the frontend (`npm run build` in `frontend/`), then start the backend from `backend/` with `uv run uvicorn app.main:app --port 8000`. It serves `frontend/out` alongside the API.
+To run without Docker, build the frontend (`npm run build` in `frontend/`), then start the backend from `backend/` with `uv run --env-file ../.env uvicorn app.main:app --port 8000`. It serves `frontend/out` alongside the API.

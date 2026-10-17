@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from . import auth
+from . import auth, chat
 from .db import init_db
 
 DEFAULT_STATIC_DIR = Path(__file__).resolve().parents[2] / "frontend" / "out"
@@ -31,6 +31,7 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(auth.router)
+    app.include_router(chat.router)
 
     # Mounted last so the API routes above take precedence. Skipped when the
     # frontend has not been built, e.g. when running the API on its own.

@@ -26,7 +26,7 @@ const emptyParty = (): Party => ({ name: "", title: "", company: "", noticeAddre
 // Defaults mirror the pre-filled values in templates/Mutual-NDA-coverpage.md.
 export const defaultNdaData: NdaData = {
   purpose: "Evaluating whether to enter into a business relationship with the other party.",
-  effectiveDate: "", // NdaCreator falls back to today
+  effectiveDate: "", // gathered by the AI chat
   mndaTermType: "expires",
   mndaTermYears: 1,
   confidentialityTermType: "years",
@@ -50,13 +50,6 @@ export function orPlaceholder(value: string, label: string): string {
 
 function years(n: number): string {
   return `${n} year${n === 1 ? "" : "s"}`;
-}
-
-/** Today's date in the user's local time zone, as yyyy-mm-dd. */
-export function todayIsoDate(): string {
-  const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
 export function formatDate(isoDate: string): string {
