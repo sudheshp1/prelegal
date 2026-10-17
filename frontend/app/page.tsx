@@ -11,8 +11,8 @@ export default function Home() {
         <header className="mb-8 space-y-2">
           <h1 className="text-3xl font-bold text-brand-navy">Mutual NDA Creator</h1>
           <p className="max-w-2xl text-slate-600">
-            Fill in the key terms below to generate a Mutual Non-Disclosure Agreement based on the Common Paper
-            standard. The preview updates as you type, and you can download the completed agreement as a PDF.
+            Chat with our AI assistant to draft a Mutual Non-Disclosure Agreement based on the Common Paper
+            standard. The preview fills in as you answer, and you can download the completed agreement as a PDF.
           </p>
         </header>
         <NdaCreator terms={terms} />
